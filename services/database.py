@@ -35,6 +35,10 @@ def init_db():
     conn.close()
 
 
+# -----------------------------
+# Chat Session Functions
+# -----------------------------
+
 def create_chat(title="New Chat"):
     conn = get_connection()
 
@@ -58,13 +62,67 @@ def get_chats():
     chats = conn.execute("""
         SELECT *
         FROM chat_sessions
-        ORDER BY created_at DESC
+        ORDER BY id DESC
     """).fetchall()
 
     conn.close()
 
     return chats
 
+
+def get_chat(chat_id):
+    conn = get_connection()
+
+    chat = conn.execute(
+        """
+        SELECT *
+        FROM chat_sessions
+        WHERE id = ?
+        """,
+        (chat_id,)
+    ).fetchone()
+
+    conn.close()
+
+    return chat
+
+
+def rename_chat(chat_id, title):
+    conn = get_connection()
+
+    conn.execute(
+        """
+        UPDATE chat_sessions
+        SET title = ?
+        WHERE id = ?
+        """,
+        (title, chat_id)
+    )
+
+    conn.commit()
+    conn.close()
+
+
+def delete_chat(chat_id):
+    conn = get_connection()
+
+    conn.execute(
+        "DELETE FROM messages WHERE chat_id = ?",
+        (chat_id,)
+    )
+
+    conn.execute(
+        "DELETE FROM chat_sessions WHERE id = ?",
+        (chat_id,)
+    )
+
+    conn.commit()
+    conn.close()
+
+
+# -----------------------------
+# Message Functions
+# -----------------------------
 
 def save_message(chat_id, role, message):
     conn = get_connection()
@@ -101,7 +159,11 @@ def get_messages(chat_id):
     for row in rows:
         history.append({
             "role": row["role"],
-            "parts": [{"text": row["message"]}]
+            "parts": [
+                {
+                    "text": row["message"]
+                }
+            ]
         })
 
     return history
@@ -111,7 +173,10 @@ def clear_messages(chat_id):
     conn = get_connection()
 
     conn.execute(
-        "DELETE FROM messages WHERE chat_id = ?",
+        """
+        DELETE FROM messages
+        WHERE chat_id = ?
+        """,
         (chat_id,)
     )
 
